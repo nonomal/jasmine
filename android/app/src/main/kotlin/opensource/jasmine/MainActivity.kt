@@ -1,4 +1,4 @@
-package niuhuan.jasmine
+package opensource.jasmine
 
 import android.content.ContentValues
 import android.graphics.Bitmap
@@ -10,11 +10,15 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
 import android.view.Display
+import android.view.KeyEvent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
+import java.io.File
+import opensource.jenny.Jni
 
 class MainActivity : FlutterActivity() {
 
@@ -29,6 +33,9 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "methods").setMethodCallHandler(
             this::methods
         )
+        //
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "volume_button")
+            .setStreamHandler(volumeStreamHandler)
         // super
         super.configureFlutterEngine(flutterEngine)
     }
@@ -45,6 +52,12 @@ class MainActivity : FlutterActivity() {
                     setMode(call.argument("mode")!!)
                 }
                 "androidGetVersion" -> Build.VERSION.SDK_INT
+                "androidStorageRoot" -> storageRoot()
+                "androidDefaultExportsDir" -> androidDefaultExportsDir().absolutePath
+                "androidMkdirs" -> androidMkdirs(
+                    call.arguments<String>() ?: throw Exception("need arg"),
+                )
+                "picturesDir" -> picturesDir().absolutePath
                 else -> result.notImplemented()
             }
         }
@@ -150,6 +163,68 @@ class MainActivity : FlutterActivity() {
                     }
                 }
             }
+        }
+    }
+
+// volume_buttons
+
+    private var volumeEvents: EventChannel.EventSink? = null
+
+    private val volumeStreamHandler = object : EventChannel.StreamHandler {
+
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            volumeEvents = events
+        }
+
+        override fun onCancel(arguments: Any?) {
+            volumeEvents = null
+        }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        volumeEvents?.let {
+            if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                uiThreadHandler.post {
+                    it.success("DOWN")
+                }
+                return true
+            }
+            if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                uiThreadHandler.post {
+                    it.success("UP")
+                }
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    fun storageRoot(): String {
+        return Environment.getExternalStorageDirectory().absolutePath
+    }
+
+    private fun picturesDir(): File {
+        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+            ?: throw java.lang.IllegalStateException()
+    }
+
+    private fun downloadsDir(): File {
+        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            ?: throw java.lang.IllegalStateException()
+    }
+
+    private fun defaultJennyDir(): File {
+        return File(downloadsDir(), "jasmine")
+    }
+
+    private fun androidDefaultExportsDir(): File {
+        return File(defaultJennyDir(), "exports")
+    }
+
+    private fun androidMkdirs(path: String) {
+        val dir = File(path)
+        if (!dir.exists()) {
+            dir.mkdirs()
         }
     }
 

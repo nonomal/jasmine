@@ -7,8 +7,10 @@ import 'package:jasmine/screens/components/comic_download_card.dart';
 import 'package:jasmine/screens/components/item_builder.dart';
 import 'package:jasmine/screens/components/my_flat_button.dart';
 
+import 'comic_info_screen.dart';
 import 'comic_reader_screen.dart';
 import 'comic_search_screen.dart';
+import 'components/right_click_pop.dart';
 
 class DownloadAlbumScreen extends StatefulWidget {
   final DownloadAlbum album;
@@ -32,9 +34,28 @@ class _DownloadAlbumScreenState extends State<DownloadAlbumScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return rightClickPop(child: buildScreen(context), context: context);
+  }
+
+  Widget buildScreen(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.album.name),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (BuildContext context) {
+                    return ComicInfoScreen(widget.album.id, null);
+                  },
+                ),
+              );
+            },
+            icon: const Icon(Icons.settings_ethernet_outlined),
+          ),
+        ],
       ),
       body: ListView(
         children: [
@@ -202,7 +223,7 @@ class _DownloadAlbumScreenState extends State<DownloadAlbumScreen> {
           series: create.chapters
               .map((e) => Series(id: e.id, name: e.name, sort: e.sort))
               .toList(),
-          seriesId: seriesId,
+          chapterId: seriesId,
           initRank: initRank,
           loadChapter: (int seriesId) {
             return _loadChapter(create, seriesId);

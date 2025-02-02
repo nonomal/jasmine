@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:jasmine/basic/commons.dart';
 import 'package:jasmine/basic/methods.dart';
 import 'package:jasmine/basic/navigator.dart';
+import 'package:jasmine/configs/login.dart';
 import 'package:jasmine/screens/comic_search_screen.dart';
 import 'package:jasmine/screens/components/comic_info_card.dart';
 import 'package:jasmine/screens/components/comic_list.dart';
@@ -10,6 +12,8 @@ import 'comic_download_screen.dart';
 import 'comic_reader_screen.dart';
 import 'components/comic_comments_list.dart';
 import 'components/continue_read_button.dart';
+import 'components/my_flat_button.dart';
+import 'components/right_click_pop.dart';
 
 class ComicInfoScreen extends StatefulWidget {
   final int comicId;
@@ -49,10 +53,26 @@ class _ComicInfoScreenState extends State<ComicInfoScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    return rightClickPop(child: buildScreen(context), context: context);
+  }
+
+  Widget buildScreen(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.simple?.name ?? ""),
+        title: widget.simple != null
+            ? Text(widget.simple?.name ?? "")
+            : FutureBuilder(
+                future: _albumFuture,
+                builder: (BuildContext context,
+                    AsyncSnapshot<AlbumResponse> snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done ||
+                      snapshot.hasError) {
+                    return const Text("");
+                  }
+                  return Text(snapshot.requireData.name);
+                },
+              ), //
         actions: [
           FutureBuilder(
             future: _albumFuture,
@@ -262,6 +282,22 @@ class _ComicInfoScreenState extends State<ComicInfoScreen> with RouteAware {
       setState(() {
         data.isFavorite = !data.isFavorite;
       });
+      defaultToast(context, "收藏成功");
+      if (data.isFavorite && favData.isNotEmpty) {
+        var j = favData.map((i) {
+          return MapEntry(i.name, i.fid);
+        }).toList();
+        j.add(const MapEntry("默认 / 不移动", 0));
+        var v = await chooseMapDialog<int>(
+          context,
+          title: "移动到资料夹",
+          values: Map.fromEntries(j),
+        );
+        if (v != null && v != 0) {
+          await methods.comicFavoriteFolderMove(data.id, v);
+        }
+        defaultToast(context, "移动成功");
+      }
     } finally {
       setState(() {
         _favouriteLoading = false;
@@ -292,36 +328,27 @@ class _ComicSerialsState extends State<_ComicSerials> {
           album: widget.album,
           onChoose: _onChoose,
         ),
-        widget.album.series.isEmpty ? _buildOneButton() : _buildSeriesWrap(),
+        widget.album.series.isEmpty ? _buildOneButton() : _buildSeries(),
       ],
     );
   }
 
   Widget _buildOneButton() {
-    return Container(
-      color: Colors.transparent,
-      padding: const EdgeInsets.all(10),
-      child: Row(
-        children: [
-          Expanded(
-            child: MaterialButton(
-              onPressed: () {
-                _push(
-                  widget.comicSimple,
-                  widget.album.series,
-                  widget.comicSimple.id,
-                  0,
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                child: const Text("开始阅读"),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return MyFlatButton(
+      title: "开始阅读",
+      onPressed: () {
+        _push(
+          widget.comicSimple,
+          widget.album.series,
+          widget.comicSimple.id,
+          0,
+        );
+      },
     );
+  }
+
+  Widget _buildSeries() {
+    return _buildSeriesWrap();
   }
 
   Widget _buildSeriesWrap() {
@@ -333,13 +360,53 @@ class _ComicSerialsState extends State<_ComicSerials> {
         alignment: WrapAlignment.spaceAround,
         children: widget.album.series.map((e) {
           return MaterialButton(
+            elevation:
+                Theme.of(context).colorScheme.brightness == Brightness.light
+                    ? 1
+                    : 0,
+            focusElevation: 0,
             onPressed: () {
               _push(widget.comicSimple, widget.album.series, e.id, 0);
             },
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.brightness == Brightness.light
+                ? Colors.white
+                : Theme.of(context)
+                    .textTheme
+                    .bodyText1!
+                    .color!
+                    .withOpacity(.17),
             child: Text(
               e.sort + (e.name == "" ? "" : (" - ${e.name}")),
-              style: const TextStyle(color: Colors.black),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSeriesList() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        children: widget.album.series.map((e) {
+          return MaterialButton(
+            elevation:
+                Theme.of(context).colorScheme.brightness == Brightness.light
+                    ? 1
+                    : 0,
+            focusElevation: 0,
+            onPressed: () {
+              _push(widget.comicSimple, widget.album.series, e.id, 0);
+            },
+            color: Theme.of(context).colorScheme.brightness == Brightness.light
+                ? Colors.white
+                : Theme.of(context)
+                    .textTheme
+                    .bodyText1!
+                    .color!
+                    .withOpacity(.17),
+            child: Text(
+              e.sort + (e.name == "" ? "" : (" - ${e.name}")),
             ),
           );
         }).toList(),
@@ -359,7 +426,7 @@ class _ComicSerialsState extends State<_ComicSerials> {
         builder: (context) => ComicReaderScreen(
           comic: comic,
           series: series,
-          seriesId: seriesId,
+          chapterId: seriesId,
           initRank: initRank,
           loadChapter: methods.chapter,
         ),

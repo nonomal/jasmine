@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:jasmine/basic/commons.dart';
 import 'package:jasmine/configs/android_display_mode.dart';
+import 'package:jasmine/configs/proxy.dart';
 import 'package:jasmine/configs/versions.dart';
 import 'package:jasmine/screens/components/badge.dart';
 
 import '../configs/theme.dart';
+import '../configs/using_right_click_pop.dart';
+import 'components/right_click_pop.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({Key? key}) : super(key: key);
@@ -18,6 +21,10 @@ class AboutScreen extends StatefulWidget {
 class _AboutState extends State<AboutScreen> {
   @override
   Widget build(BuildContext context) {
+    return rightClickPop(child: buildScreen(context), context: context);
+  }
+
+  Widget buildScreen(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("关于"),
@@ -27,6 +34,8 @@ class _AboutState extends State<AboutScreen> {
           const Divider(),
           _buildLogo(),
           const Divider(),
+          _buildIssues(),
+          const Divider(),
           _buildCurrentVersion(),
           const Divider(),
           _buildNewestVersion(),
@@ -34,10 +43,6 @@ class _AboutState extends State<AboutScreen> {
           _buildGotoGithub(),
           const Divider(),
           _buildVersionText(),
-          const Divider(),
-          themeSetting(context),
-          const Divider(),
-          androidDisplayModeSetting(),
           const Divider(),
         ],
       ),
@@ -49,22 +54,30 @@ class _AboutState extends State<AboutScreen> {
       builder: (BuildContext context, BoxConstraints constraints) {
         double? width, height;
         if (constraints.maxWidth < constraints.maxHeight) {
-          width = constraints.maxWidth / 2;
+          width = constraints.maxWidth / 3;
         } else {
-          height = constraints.maxHeight / 2;
+          height = constraints.maxHeight / 3;
         }
-        return Container(
-          padding: const EdgeInsets.all(10),
-          child: Center(
-            child: SizedBox(
-              width: width,
-              height: height,
-              child: Image.asset(
-                "lib/assets/startup.webp",
-                fit: BoxFit.contain,
+        double l = width ?? height!;
+        return Column(
+          children: [
+            Container(height: l / 4),
+            SizedBox(
+              width: l,
+              height: l,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints.expand(),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  child: Image.asset(
+                    "lib/assets/ic_launcher.png",
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
-          ),
+            Container(height: l / 4),
+          ],
         );
       },
     );
@@ -111,8 +124,9 @@ class _AboutState extends State<AboutScreen> {
           style: TextStyle(height: 1.3, color: Colors.blue),
           strutStyle: StrutStyle(height: 1.3),
         ),
-        onTap: () {
-          manualCheckNewVersion(context);
+        onTap: () async {
+          await manualCheckNewVersion(context);
+          setState(() {});
         },
       ),
     );
@@ -141,6 +155,15 @@ class _AboutState extends State<AboutScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       child: SelectableText(info ?? ""),
+    );
+  }
+
+  Widget _buildIssues() {
+    return ListTile(
+      title: const Text("意见反馈"),
+      onTap: () {
+        openUrl("https://github.com/niuhuan/jasmine/issues/");
+      },
     );
   }
 }

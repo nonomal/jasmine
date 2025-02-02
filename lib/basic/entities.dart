@@ -51,6 +51,11 @@ class CountPage<T> {
     json["count"] = count;
     return json;
   }
+
+  CountPage() {
+    total = 0;
+    count = 0;
+  }
 }
 
 class SearchPage {
@@ -61,16 +66,19 @@ class SearchPage {
 
   late final String searchQuery;
   late final int total;
+  late final int? redirectAid;
 
   SearchPage.fromJson(Map<String, dynamic> json) {
     searchQuery = json['search_query'];
     total = json['total'];
+    redirectAid = json['redirect_aid'];
   }
 
   Map<String, dynamic> toJson() {
     final _data = <String, dynamic>{};
     _data['search_query'] = searchQuery;
     _data['total'] = total;
+    _data['redirect_aid'] = redirectAid;
     return _data;
   }
 }
@@ -591,11 +599,13 @@ class PreLoginResponse {
     required this.preSet,
     required this.preLogin,
     required this.selfInfo,
+    required this.message,
   });
 
   late final bool preSet;
   late final bool preLogin;
   late final SelfInfo? selfInfo;
+  late final String? message;
 
   PreLoginResponse.fromJson(Map<String, dynamic> json) {
     preSet = json['pre_set'];
@@ -605,6 +615,7 @@ class PreLoginResponse {
     } else {
       selfInfo = null;
     }
+    message = json['message'];
   }
 
   Map<String, dynamic> toJson() {
@@ -612,6 +623,7 @@ class PreLoginResponse {
     _data['pre_set'] = preSet;
     _data['pre_login'] = preLogin;
     _data['self_info'] = selfInfo?.toJson();
+    _data['message'] = message;
     return _data;
   }
 }
@@ -646,7 +658,7 @@ class SelfInfo {
   late final String fname;
   late final String gender;
   late final String message;
-  late final String coin;
+  late final int coin;
   late final int albumFavorites;
   late final String s;
   late final String levelName;
@@ -702,6 +714,81 @@ class SelfInfo {
   }
 }
 
+class FavoriteFolder {
+  FavoriteFolder({
+    required this.fid,
+    required this.uid,
+    required this.name,
+  });
+
+  late final String fid;
+  late final String uid;
+  late final String name;
+
+  FavoriteFolder.fromJson(Map<String, dynamic> json) {
+    fid = json['FID'];
+    uid = json['UID'];
+    name = json['name'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final _data = <String, dynamic>{};
+    _data['FID'] = fid;
+    _data['UID'] = uid;
+    _data['name'] = name;
+    return _data;
+  }
+}
+
+class Favorite extends CountPage<ComicSimple> {
+  late final List<FavoriteFolderItem> folderList;
+  Favorite.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
+    list = List.from(json['list']).map((e) => ComicSimple.fromJson(e)).toList();
+    folderList = List.from(json['folder_list'])
+        .map((e) => FavoriteFolderItem.fromJson(e))
+        .toList();
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final _data = super.toJson();
+    _data['list'] = list;
+    _data['folder_list'] = folderList;
+    return _data;
+  }
+
+  Favorite(): super() {
+    list = [];
+    folderList = [];
+  }
+}
+
+class FavoriteFolderItem {
+  FavoriteFolderItem({
+    required this.fid,
+    required this.uid,
+    required this.name,
+  });
+
+  late final int fid;
+  late final int uid;
+  late final String name;
+
+  FavoriteFolderItem.fromJson(Map<String, dynamic> json) {
+    fid = json['FID'];
+    uid = json['UID'];
+    name = json['name'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final _data = <String, dynamic>{};
+    _data['FID'] = fid;
+    _data['UID'] = uid;
+    _data['name'] = name;
+    return _data;
+  }
+}
+
 class FavoritesResponse extends CountPage<ComicSimple> {
   FavoritesResponse.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     list = List.from(json['list']).map((e) => ComicSimple.fromJson(e)).toList();
@@ -744,10 +831,12 @@ class ActionResponse {
 class InnerComicPage {
   final int total;
   final List<ComicSimple> list;
+  final int? redirectAid;
 
   InnerComicPage({
     required this.total,
     required this.list,
+    this.redirectAid,
   });
 }
 
@@ -1076,6 +1165,7 @@ class DownloadAlbum {
     required this.imageCount,
     required this.dledImageCount,
   });
+
   late final int id;
   late final String name;
   late final String author;
@@ -1088,7 +1178,7 @@ class DownloadAlbum {
   late final int imageCount;
   late final int dledImageCount;
 
-  DownloadAlbum.fromJson(Map<String, dynamic> json){
+  DownloadAlbum.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     name = json['name'];
     author = json['author'];
@@ -1130,6 +1220,7 @@ class DlImage {
     required this.width,
     required this.height,
   });
+
   late final int albumId;
   late final int chapterId;
   late final int imageIndex;
@@ -1139,7 +1230,7 @@ class DlImage {
   late final int width;
   late final int height;
 
-  DlImage.fromJson(Map<String, dynamic> json){
+  DlImage.fromJson(Map<String, dynamic> json) {
     albumId = json['album_id'];
     chapterId = json['chapter_id'];
     imageIndex = json['image_index'];
@@ -1170,6 +1261,16 @@ ComicBasic albumToSimple(AlbumResponse album) {
     description: album.description,
     name: album.name,
     author: album.author.join(" / "),
-    image: album.images[0] ?? '',
+    image: album.images.isEmpty ? '' : album.images[0] ?? '',
   );
+}
+
+class IsPro {
+  late bool isPro;
+  late int expire;
+
+  IsPro.fromJson(Map<String, dynamic> json) {
+    isPro = json["is_pro"];
+    this.expire = json["expire"];
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jasmine/configs/versions.dart';
 import 'package:jasmine/screens/browser_screen.dart';
 import 'package:jasmine/screens/comic_search_screen.dart';
 import 'package:jasmine/screens/components/badge.dart';
@@ -19,7 +20,7 @@ class _AppScreenState extends State<AppScreen> {
 
   late final List<AppScreenData> _screens = [
     AppScreenData(
-      BrowserScreen(searchBarController: _searchBarController),
+      BrowserScreenWrapper(searchBarController: _searchBarController),
       '浏览',
       const Icon(Icons.menu_book_outlined),
       const Icon(Icons.menu_book),
@@ -33,9 +34,23 @@ class _AppScreenState extends State<AppScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration.zero, () async {
+      versionPop(context);
+      versionEvent.subscribe(_versionSub);
+    });
+  }
+
+  @override
   void dispose() {
+    versionEvent.unsubscribe(_versionSub);
     _pageController.dispose();
     super.dispose();
+  }
+
+  _versionSub(_) {
+    versionPop(context);
   }
 
   var _selectedIndex = 0;

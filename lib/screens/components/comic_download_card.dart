@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../basic/methods.dart';
@@ -43,7 +45,7 @@ class ComicDownloadCard extends StatelessWidget {
               children: [
                 Text(comic.name, style: titleStyle),
                 Container(height: 4),
-                Text(comic.author, style: authorStyle),
+                Text(_author(comic.author), style: authorStyle),
                 Container(height: 4),
                 _buildCategoryRow(),
                 Container(height: 4),
@@ -61,9 +63,26 @@ class ComicDownloadCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 10),
                   ),
                 ])),
+                ...(comic.dlStatus == 0)
+                    ? [
+                        const Text("队列中", style: TextStyle(color: Colors.blue)),
+                      ]
+                    : [],
+                ...(comic.dlStatus == 1)
+                    ? [
+                        const Text("已下载",
+                            style: TextStyle(color: Colors.green)),
+                      ]
+                    : [],
+                ...(comic.dlStatus == 2)
+                    ? [
+                        const Text("已失败", style: TextStyle(color: Colors.red)),
+                      ]
+                    : [],
                 ...(comic.dlStatus == 3)
                     ? [
-                        const Text("删除中", style: TextStyle(color: Colors.red)),
+                        const Text("删除中",
+                            style: TextStyle(color: Colors.orange)),
                       ]
                     : [],
               ],
@@ -95,5 +114,13 @@ class ComicDownloadCard extends StatelessWidget {
       Text(category.title!),
       Container(width: 15),
     ];
+  }
+}
+
+String _author(String author) {
+  try {
+    return List.of(jsonDecode(author)).cast<String>().join(", ");
+  } catch (e) {
+    return author;
   }
 }

@@ -4,8 +4,11 @@ import 'package:jasmine/configs/login.dart';
 import 'package:jasmine/screens/about_screen.dart';
 import 'package:jasmine/screens/comments_screen.dart';
 import 'package:jasmine/screens/components/avatar.dart';
+import 'package:jasmine/screens/pro_screen.dart';
+import 'package:jasmine/screens/settings_screen.dart';
 import 'package:jasmine/screens/view_log_screen.dart';
 
+import '../configs/is_pro.dart';
 import 'components/badge.dart';
 import 'downloads_screen.dart';
 import 'favorites_screen.dart';
@@ -25,12 +28,14 @@ class _UserScreenState extends State<UserScreen>
   @override
   void initState() {
     loginEvent.subscribe(_setState);
+    proEvent.subscribe(_setState);
     super.initState();
   }
 
   @override
   void dispose() {
     loginEvent.unsubscribe(_setState);
+    proEvent.unsubscribe(_setState);
     super.dispose();
   }
 
@@ -42,7 +47,21 @@ class _UserScreenState extends State<UserScreen>
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      appBar: AppBar(title: const Text("个人中心"), actions: [_buildAbout()]),
+      appBar: AppBar(title: const Text("个人中心"), actions: [
+        IconButton(
+          onPressed: () {
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (BuildContext context) {
+              return const ProScreen();
+            }));
+          },
+          icon: Icon(
+            isPro ? Icons.offline_bolt : Icons.offline_bolt_outlined,
+          ),
+        ),
+        _buildSettingsIcon(),
+        _buildAboutIcon(),
+      ]),
       body: SafeArea(
         child: ListView(
           children: [
@@ -56,6 +75,12 @@ class _UserScreenState extends State<UserScreen>
             const Divider(),
             _buildComments(),
             const Divider(),
+            // _buildFdT(),
+            // const Divider(),
+            // _buildSettingsT(),
+            // const Divider(),
+            // _buildAboutT(),
+            // const Divider(),
             Container(height: 30),
           ],
         ),
@@ -76,15 +101,18 @@ class _UserScreenState extends State<UserScreen>
         child = _buildSelfInfoCard();
         break;
       case LoginStatus.loginField:
-        child = _buildLoginButton("登录失败/点击重试");
+        child = Column(children: [
+          _buildLoginButton("登录失败/点击重试"),
+          Container(height: 10),
+          _buildLoginErrorButton(),
+        ]);
         break;
     }
     return Container(
       height: 200,
-      color: Color.alphaBlend(
-        Colors.grey.withOpacity(.1),
-        Theme.of(context).appBarTheme.backgroundColor ?? Colors.black,
-      ),
+      color: Theme.of(context).brightness == Brightness.light
+          ? Colors.grey.shade200
+          : Colors.grey.shade800,
       child: Center(
         child: child,
       ),
@@ -131,6 +159,50 @@ class _UserScreenState extends State<UserScreen>
     );
   }
 
+  Widget _buildLoginErrorButton() {
+    return MaterialButton(
+      onPressed: () async {
+        await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("登录失败"),
+              content: SelectableText(loginMessage),
+              actions: [
+                MaterialButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("确认"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.only(left: 15, right: 15, top: 8, bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.red.shade700,
+          border: Border.all(
+            color: Colors.black,
+            style: BorderStyle.solid,
+            width: .5,
+          ),
+          borderRadius: const BorderRadius.all(Radius.circular(4)),
+        ),
+        child: const Text(
+          "查看错误",
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+            fontWeight: FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSelfInfoCard() {
     return Column(
       children: [
@@ -142,8 +214,10 @@ class _UserScreenState extends State<UserScreen>
         Center(
           child: Text(
             selfInfo.username,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).brightness == Brightness.light
+                  ? Colors.black87
+                  : Colors.white,
             ),
           ),
         ),
@@ -208,7 +282,20 @@ class _UserScreenState extends State<UserScreen>
     );
   }
 
-  Widget _buildAbout() {
+  Widget _buildSettingsIcon() {
+    return IconButton(
+      onPressed: () async {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (BuildContext context) {
+            return const SettingsScreen();
+          },
+        ));
+      },
+      icon: const Icon(Icons.settings),
+    );
+  }
+
+  Widget _buildAboutIcon() {
     return IconButton(
       onPressed: () async {
         Navigator.of(context).push(MaterialPageRoute(
@@ -218,8 +305,52 @@ class _UserScreenState extends State<UserScreen>
         ));
       },
       icon: const VersionBadged(
-          child: Padding(
-              padding: EdgeInsets.all(1), child: Icon(Icons.info_outlined))),
+        child: Padding(
+          padding: EdgeInsets.all(1),
+          child: Icon(Icons.info_outlined),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFdT() {
+    return ListTile(
+      title: const Text("发电"),
+      onTap: () {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (BuildContext context) {
+            return const ProScreen();
+          },
+        ));
+      },
+    );
+  }
+
+  Widget _buildSettingsT() {
+    return ListTile(
+      title: const Text("设置"),
+      onTap: () {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (BuildContext context) {
+            return const SettingsScreen();
+          },
+        ));
+      },
+    );
+  }
+
+  Widget _buildAboutT() {
+    return ListTile(
+      title: const VersionBadged(
+        child: Text("关于"),
+      ),
+      onTap: () {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (BuildContext context) {
+            return const AboutScreen();
+          },
+        ));
+      },
     );
   }
 }

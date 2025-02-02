@@ -76,6 +76,11 @@ class Methods {
     return ComicsResponse.fromJson(jsonDecode(rsp));
   }
 
+  Future<dynamic> deleteViewLogByComicId(int comicId) async {
+    final rsp = await _invoke("delete_view_log_by_comic_id", comicId);
+    return rsp;
+  }
+
   Future<CategoriesResponse> categories() async {
     return CategoriesResponse.fromJson(
         jsonDecode(await _invoke("categories", "")));
@@ -105,9 +110,19 @@ class Methods {
     })));
   }
 
-  Future<FavoritesResponse> favorites(int page) async {
-    return FavoritesResponse.fromJson(
-      jsonDecode(await _invoke("favorites", page)),
+  Future<Favorite> favorites(int folderId, int page, String o) async {
+    return Favorite.fromJson(
+      jsonDecode(await _invoke("favorites", {
+        "folder_id": folderId,
+        "page": page,
+        "o": o,
+      })),
+    );
+  }
+
+  Future<Favorite> favorite() async {
+    return Favorite.fromJson(
+      jsonDecode(await _invoke("favorite", "")),
     );
   }
 
@@ -115,6 +130,22 @@ class Methods {
     return ActionResponse.fromJson(
       jsonDecode(await _invoke("set_favorite", aid)),
     );
+  }
+
+  Future createFavoriteFolder(String name) async {
+    return _invoke("create_favorite_folder", name);
+  }
+
+  Future deleteFavoriteFolder(int folderId) async {
+    return _invoke("delete_favorite_folder", folderId);
+  }
+
+  Future comicFavoriteFolderMove(int comicId, int folderId) async {
+    return _invoke("comic_favorite_folder_move", [comicId, folderId]);
+  }
+
+  Future renameFavoriteFolder(int folderId, String name) async {
+    return _invoke("rename_favorite_folder", ["$folderId", name]);
   }
 
   Future<GamePage> games(int page) async {
@@ -198,6 +229,10 @@ class Methods {
     );
   }
 
+  Future logout() async {
+    await _invoke("logout", {});
+  }
+
   Future<CommentResponse> commentResponse(int aid, String comment) async {
     return CommentResponse.fromJson(jsonDecode(await _invoke("comment", {
       "aid": aid,
@@ -226,6 +261,10 @@ class Methods {
 
   Future<String> loadUsername() {
     return _invoke("load_username", "");
+  }
+
+  Future<String> loadLastLoginUsername() {
+    return _invoke("loadLastLoginUsername", "");
   }
 
   Future<String> loadPassword() {
@@ -300,6 +339,201 @@ class Methods {
       return await _channel.invokeMethod("androidGetVersion", {});
     }
     return 0;
+  }
+
+  Future export_jm_jpegs(List<int> idList, String path, bool deleteExported) {
+    return _invoke("export_jm_jpegs", {
+      "comic_id": idList,
+      "dir": path,
+      "delete_exported": deleteExported,
+    });
+  }
+
+  Future export_jm_zip(List<int> idList, String path, bool deleteExported) {
+    return _invoke("export_jm_zip", {
+      "comic_id": idList,
+      "dir": path,
+      "delete_exported": deleteExported,
+    });
+  }
+
+  Future export_jm_zip_single(
+      int id, String folder, String? rename, bool deleteExported) {
+    return _invoke("export_jm_zip_single", {
+      "id": id,
+      "folder": folder,
+      "rename": rename,
+      "delete_exported": deleteExported,
+    });
+  }
+
+  Future export_jm_jpegs_zip_single(
+      int id, String folder, String? rename, bool deleteExported) {
+    return _invoke("export_jm_jpegs_zip_single", {
+      "id": id,
+      "folder": folder,
+      "rename": rename,
+      "delete_exported": deleteExported,
+    });
+  }
+
+  Future export_jm_jmi(List<int> idList, String path, bool deleteExported) {
+    return _invoke("export_jm_jmi", {
+      "comic_id": idList,
+      "dir": path,
+      "delete_exported": deleteExported,
+    });
+  }
+
+  Future export_jm_jmi_single(
+      int id, String folder, String? rename, bool deleteExported) {
+    return _invoke("export_jm_jmi_single", {
+      "id": id,
+      "folder": folder,
+      "rename": rename,
+      "delete_exported": deleteExported,
+    });
+  }
+
+  Future export_cbzs_zip_single(
+      int id, String folder, String? rename, bool deleteExported) {
+    return _invoke("export_cbzs_zip_single", {
+      "id": id,
+      "folder": folder,
+      "rename": rename,
+      "delete_exported": deleteExported,
+    });
+  }
+
+  Future export_jm_pdf(int id, String folder, bool deleteExported) {
+    return _invoke("export_jm_pdf", {
+      "comic_id": [id],
+      "dir": folder,
+      "delete_exported": deleteExported,
+    });
+  }
+
+  Future import_jm_zip(String path) {
+    print(path);
+    return _invoke("import_jm_zip", path);
+  }
+
+  Future import_jm_jmi(String path) {
+    print(path);
+    return _invoke("import_jm_jmi", path);
+  }
+
+  Future import_jm_dir(String path) {
+    print(path);
+    return _invoke("import_jm_dir", path);
+  }
+
+  Future<IsPro> isPro() async {
+    return IsPro.fromJson(jsonDecode(await _invoke("is_pro", "")));
+  }
+
+  Future reloadPro() {
+    return _invoke("reload_pro", "");
+  }
+
+  Future inputCdKey(String cdKey) {
+    return _invoke("input_cd_key", cdKey);
+  }
+
+  Future<int> load_download_thread() async {
+    return int.parse(await _invoke("load_download_thread", ""));
+  }
+
+  Future set_download_thread(int count) {
+    return _invoke("set_download_thread", "${count}");
+  }
+
+  Future clearAllSearchLog() {
+    return _invoke("clear_all_search_log", "");
+  }
+
+  Future clearASearchLog(String log) {
+    return _invoke("clear_a_search_log", log);
+  }
+
+  Future setProxy(String url) {
+    return _invoke("set_proxy", url);
+  }
+
+  Future<String> getProxy() {
+    return _invoke("get_proxy", "");
+  }
+
+  Future webDavSync(dynamic params) {
+    return _invoke("sync_webdav", params);
+  }
+
+  Future<String> iosGetDocumentDir() async {
+    return await _channel.invokeMethod("iosGetDocumentDir");
+  }
+
+  Future<String> androidDefaultExportsDir() async {
+    return await _channel.invokeMethod("androidDefaultExportsDir");
+  }
+
+  Future<String> getDownloadAndExportTo() async {
+    return await _invoke("get_download_and_export_to", "");
+  }
+
+  Future<String> getHomeDir() async {
+    return await _invoke("getHomeDir", "");
+  }
+
+  Future setDownloadAndExportTo(String path) async {
+    return await _invoke("set_download_and_export_to", path);
+  }
+
+  Future<int> ping(String idx) async {
+    print("PING API $idx");
+    return int.parse(await _invoke("ping_server", idx));
+  }
+
+  Future<int> pingCdn(String idx) async {
+    print("PING CDN $idx");
+    return int.parse(await _invoke("ping_cdn", idx));
+  }
+
+  Future mkdirs(String path) {
+    return _invoke("mkdirs", path);
+  }
+
+  Future androidMkdirs(String path) async {
+    return await _channel.invokeMethod("androidMkdirs", path);
+  }
+
+  Future<String> picturesDir() async {
+    return await _channel.invokeMethod("picturesDir");
+  }
+
+  Future<String> copyPictureToFolder(String folder, String path) async {
+    return await _invoke(
+      "copyPictureToFolder",
+      {
+        "folder": folder,
+        "path": path,
+      },
+    );
+  }
+
+  Future<String> getProServerName() async {
+    return await _invoke("get_pro_server_name", "");
+  }
+
+  Future setProServerName(String serverName) async {
+    return await _invoke("set_pro_server_name", serverName);
+  }
+
+  Future<bool> verifyAuthentication() async {
+    return await _channel.invokeMethod("verifyAuthentication");
+  }
+
+  Future<String> daily(int uid) {
+    return _invoke("daily", uid);
   }
 }
 

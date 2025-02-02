@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:event/event.dart';
 import 'package:flutter/material.dart';
 import 'package:jasmine/basic/commons.dart';
 import 'package:jasmine/basic/methods.dart';
+import 'package:jasmine/configs/is_pro.dart';
 
 enum LoginStatus {
   notSet,
@@ -12,6 +15,7 @@ enum LoginStatus {
 
 late SelfInfo _selfInfo;
 LoginStatus _status = LoginStatus.notSet;
+String _loginMessage = "";
 final Event _event = Event();
 
 SelfInfo get selfInfo => _selfInfo;
@@ -20,38 +24,148 @@ Event get loginEvent => _event;
 
 LoginStatus get loginStatus => _status;
 
+String get loginMessage => _loginMessage;
+
 set _loginState(LoginStatus value) {
   _status = value;
   _event.broadcast();
 }
 
-Future initLogin() async {
+Future initLogin(BuildContext context) async {
   try {
     _loginState = LoginStatus.logging;
     final preLogin = await methods.preLogin();
+    _loginMessage = preLogin.message ?? "";
     if (!preLogin.preSet) {
       _loginState = LoginStatus.notSet;
     } else if (preLogin.preLogin) {
       _selfInfo = preLogin.selfInfo!;
       _loginState = LoginStatus.loginSuccess;
+      daily(context);
+      fav(context);
     } else {
       _loginState = LoginStatus.loginField;
     }
   } catch (e, st) {
     print("$e\n$st");
     _loginState = LoginStatus.loginField;
+  } finally {
+    reloadIsPro();
   }
 }
 
-Future _login(String username, String password) async {
+Future daily(BuildContext context) async {
+  try {
+    String msg = await methods.daily(selfInfo.uid);
+    if (msg.isNotEmpty) {
+      defaultToast(context, msg);
+    }
+  } catch (e, st) {
+    print("$e\n$st");
+    defaultToast(context, "$e");
+  }
+}
+
+List<FavoriteFolderItem> favData = [];
+
+Widget createFavoriteFolderItemTile(BuildContext context) {
+  return ListTile(
+    title: const Text("创建收藏文件夹"),
+    onTap: () async {
+      if (loginStatus != LoginStatus.loginSuccess) {
+        defaultToast(context, "请先登录");
+        return;
+      }
+      var name = await displayTextInputDialog(context,
+          title: "创建收藏文件夹", hint: "文件夹名称");
+      if (name == null) {
+        return;
+      }
+      await methods.createFavoriteFolder(name);
+      fav(context);
+      defaultToast(context, "创建成功");
+    },
+  );
+}
+
+Widget deleteFavoriteFolderItemTile(BuildContext context) {
+  return ListTile(
+    title: const Text("删除收藏文件夹"),
+    onTap: () async {
+      if (loginStatus != LoginStatus.loginSuccess) {
+        defaultToast(context, "请先登录");
+        return;
+      }
+      var j = favData.map((i) {
+        return MapEntry(i.name, i.fid);
+      }).toList();
+      j.add(const MapEntry("默认 / 不删除", 0));
+      var v = await chooseMapDialog<int>(
+        context,
+        title: "删除资料夹",
+        values: Map.fromEntries(j),
+      );
+      if (v != null && v != 0) {
+        await methods.deleteFavoriteFolder(v);
+        fav(context);
+        defaultToast(context, "删除成功");
+      }
+    },
+  );
+}
+
+Widget renameFavoriteFolderItemTile(BuildContext context) {
+  return ListTile(
+    title: const Text("重命名收藏文件夹"),
+    onTap: () async {
+      if (loginStatus != LoginStatus.loginSuccess) {
+        defaultToast(context, "请先登录");
+        return;
+      }
+      var j = favData.map((i) {
+        return MapEntry(i.name, i.fid);
+      }).toList();
+      j.add(const MapEntry("默认 / 不重命名", 0));
+      var v = await chooseMapDialog<int>(
+        context,
+        title: "重命名资料夹",
+        values: Map.fromEntries(j),
+      );
+      if (v != null && v != 0) {
+        var name = await displayTextInputDialog(context,
+            title: "重命名收藏文件夹", hint: "文件夹名称");
+        if (name == null) {
+          return;
+        }
+        await methods.renameFavoriteFolder(v, name);
+        fav(context);
+        defaultToast(context, "重命名成功");
+      }
+    },
+  );
+}
+
+Future fav(BuildContext buildContext) async {
+  try {
+    favData = (await methods.favorite()).folderList;
+  } catch (e, st) {
+    print("$e\n$st");
+    defaultToast(buildContext, "$e");
+  }
+}
+
+Future login(String username, String password, BuildContext context) async {
   try {
     _loginState = LoginStatus.logging;
     final selfInfo = await methods.login(username, password);
     _selfInfo = selfInfo;
     _loginState = LoginStatus.loginSuccess;
+    daily(context);
+    fav(context);
   } catch (e, st) {
     print("$e\n$st");
     _loginState = LoginStatus.loginField;
+    _loginMessage = "$e";
   }
 }
 
@@ -99,9 +213,9 @@ class _LoginDialogState extends State<_LoginDialog> {
       height: 250,
       width: MediaQuery.of(context).size.width - 90,
       margin: const EdgeInsets.all(30),
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(10)),
-        color: Colors.white,
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(Radius.circular(10)),
+        color: Theme.of(context).scaffoldBackgroundColor,
       ),
       child: Material(
         color: Colors.transparent,
@@ -161,7 +275,7 @@ class _LoginDialogState extends State<_LoginDialog> {
                   child: MaterialButton(
                     color: Colors.orange.shade700,
                     onPressed: () {
-                      openUrl("https://jmcomic1.cc/signup");
+                      regxxx(context);
                     },
                     child: Container(
                       padding: const EdgeInsets.all(10),
@@ -178,7 +292,8 @@ class _LoginDialogState extends State<_LoginDialog> {
                     color: Colors.orange.shade700,
                     onPressed: () async {
                       Navigator.of(context).pop();
-                      _login(_username, _password);
+                      await login(_username, _password, context);
+                      await reloadIsPro();
                     },
                     child: Container(
                       padding: const EdgeInsets.all(10),
@@ -195,5 +310,24 @@ class _LoginDialogState extends State<_LoginDialog> {
         ),
       ),
     );
+  }
+}
+
+Future regxxx(BuildContext context) async {
+  String? fen = await chooseMapDialog(
+    context,
+    values: {
+      "國際通用網域1": "aHR0cHM6Ly8xOGNvbWljLnZpcC9zaWdudXA=",
+      "國際通用網域2": "aHR0cHM6Ly8xOGNvbWljLm9yZy9zaWdudXA=",
+      "东南亚分流1": "aHR0cHM6Ly9qbWNvbWljLm1lL3NpZ251cA==",
+      "东南亚分流2": "aHR0cHM6Ly9qbWNvbWljMS5tZS9zaWdudXA=",
+      "内地分流0": "aHR0cHM6Ly8xOGNvbWljLWdvZC5jYy9zaWdudXA=",
+      "内地分流1": "aHR0cHM6Ly8xOGNvbWljLWdvZC5jbHViL3NpZ251cA==",
+      "内地分流2": "aHR0cHM6Ly8xOGNvbWljLWdvZC54eXovc2lnbnVw",
+    },
+    title: "选择注册分流",
+  );
+  if (fen != null) {
+    openUrl(String.fromCharCodes(base64Decode(fen)));
   }
 }

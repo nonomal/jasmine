@@ -1,5 +1,6 @@
 import UIKit
 import Flutter
+import LocalAuthentication
 
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
@@ -7,11 +8,16 @@ import Flutter
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        
-        let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-        let chars = documentsPath.cString(using: String.Encoding.utf8)
+
+        let documentDirectory = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+        let fromChars = documentDirectory.cString(using: String.Encoding.utf8)
+
+        let applicationSupportDirectory = NSSearchPathForDirectoriesInDomains(.applicationSupportDirectory, .userDomainMask, true)[0]
+        let chars = applicationSupportDirectory.cString(using: String.Encoding.utf8)
+
+        migration_ffi(fromChars,chars)
         init_ffi(chars!)
-        
+
         
         let controller = self.window.rootViewController as! FlutterViewController
         FlutterMethodChannel.init(name: "methods", binaryMessenger: controller as! FlutterBinaryMessenger).setMethodCallHandler { (call, result) in
@@ -42,6 +48,18 @@ import Flutter
                         }
                     }else{
                         result(FlutterError(code: "", message: "params error", details: ""))
+                    }
+                case "iosGetDocumentDir" :
+                    result(documentDirectory)
+                case "verifyAuthentication":
+                    let context = LAContext()
+                    let can = context.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil)
+                    guard can == true else {
+                        result(false)
+                        return
+                    }
+                    context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "身份验证") { (success, error) in
+                        result(success)
                     }
                 default:
                     result(FlutterMethodNotImplemented)

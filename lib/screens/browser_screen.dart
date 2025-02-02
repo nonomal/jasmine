@@ -6,9 +6,65 @@ import 'package:jasmine/screens/components/comic_pager.dart';
 import 'package:jasmine/screens/components/content_builder.dart';
 import 'package:jasmine/screens/components/floating_search_bar.dart';
 
+import '../configs/categories_sort.dart';
+import '../configs/login.dart';
 import 'components/browser_bottom_sheet.dart';
 import 'components/actions.dart';
 import 'components/comic_floating_search_bar.dart';
+import 'components/content_error.dart';
+import 'components/content_loading.dart';
+
+class BrowserScreenWrapper extends StatefulWidget {
+  final FloatingSearchBarController searchBarController;
+
+  const BrowserScreenWrapper({Key? key, required this.searchBarController})
+      : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _BrowserScreenWrapperState();
+}
+
+class _BrowserScreenWrapperState extends State<BrowserScreenWrapper> {
+  @override
+  void initState() {
+    loginEvent.subscribe(_setState);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    loginEvent.unsubscribe(_setState);
+    super.dispose();
+  }
+
+  void _setState(_) {
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    switch (loginStatus) {
+      case LoginStatus.loginSuccess:
+        return BrowserScreen(searchBarController: widget.searchBarController);
+      case LoginStatus.loginField:
+        return ContentError(
+          error: "请先登录",
+          stackTrace: StackTrace.current,
+          onRefresh: () async {},
+        );
+      case LoginStatus.logging:
+        return const ContentLoading(
+          label: "登录中",
+        );
+      case LoginStatus.notSet:
+        return ContentError(
+          error: "请先登录",
+          stackTrace: StackTrace.current,
+          onRefresh: () async {},
+        );
+    }
+  }
+}
 
 class BrowserScreen extends StatefulWidget {
   final FloatingSearchBarController searchBarController;
@@ -26,19 +82,37 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool get wantKeepAlive => true;
 
   late Future<CategoriesResponse> _future;
+  late Key _key;
   String _slug = "";
   SortBy _sortBy = sortByDefault;
 
   Future<CategoriesResponse> _categories() async {
     final rsp = await methods.categories();
     blockStore = rsp.blocks;
+    sortCategories(rsp.categories);
     return rsp;
   }
 
   @override
   void initState() {
     _future = _categories();
+    _key = UniqueKey();
     super.initState();
+    categoriesSortEvent.subscribe(_resort);
+  }
+
+
+  @override
+  void dispose() {
+    categoriesSortEvent.unsubscribe(_resort);
+    super.dispose();
+  }
+
+  _resort(_) {
+    setState(() {
+      _future = _categories();
+      _key = UniqueKey();
+    });
   }
 
   @override
@@ -59,10 +133,12 @@ class _BrowserScreenState extends State<BrowserScreen>
         ],
       ),
       body: ContentBuilder(
+        key: _key,
         future: _future,
         onRefresh: () async {
           setState(() {
             _future = _categories();
+            _key = UniqueKey();
           });
         },
         successBuilder: (
@@ -74,12 +150,8 @@ class _BrowserScreenState extends State<BrowserScreen>
             SizedBox(
               height: 56,
               child: Container(
-                padding: const EdgeInsets.only(top: 5),
-                color: Color.alphaBlend(
-                  Colors.grey.shade500.withOpacity(.05),
-                  Theme.of(context).appBarTheme.backgroundColor ??
-                      Colors.transparent,
-                ),
+                padding: const EdgeInsets.only(top: 8),
+                color: Theme.of(context).appBarTheme.backgroundColor,
                 child: Row(
                   children: [
                     Expanded(

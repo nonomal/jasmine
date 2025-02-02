@@ -4,7 +4,9 @@ import 'package:jasmine/configs/pager_column_number.dart';
 import 'package:jasmine/configs/pager_cover_rate.dart';
 import 'package:jasmine/configs/pager_view_mode.dart';
 import 'package:jasmine/screens/comic_info_screen.dart';
+import 'package:jasmine/screens/components/types.dart';
 
+import '../../basic/commons.dart';
 import 'comic_info_card.dart';
 import 'images.dart';
 
@@ -14,6 +16,7 @@ class ComicList extends StatefulWidget {
   final Widget? append;
   final ScrollController? controller;
   final Function? onScroll;
+  final List<ComicLongPressMenuItem>? longPressMenuItems;
 
   const ComicList({
     Key? key,
@@ -22,6 +25,7 @@ class ComicList extends StatefulWidget {
     this.controller,
     this.inScroll = false,
     this.onScroll,
+    this.longPressMenuItems,
   }) : super(key: key);
 
   @override
@@ -70,7 +74,10 @@ class _ComicListState extends State<ComicList> {
         onTap: () {
           _pushToComicInfo(widget.data[i]);
         },
+        onLongPress: _longPressCallback(i),
         child: Card(
+          shape: coverShape,
+          clipBehavior: Clip.antiAlias,
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               switch (currentPagerCoverRate) {
@@ -79,12 +86,14 @@ class _ComicListState extends State<ComicList> {
                     comicId: widget.data[i].id,
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
+                    longPressMenuItems: _longPressImageCallback(i),
                   );
                 case PagerCoverRate.rateSquare:
                   return JMSquareCover(
                     comicId: widget.data[i].id,
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
+                    longPressMenuItems: _longPressImageCallback(i),
                   );
               }
             },
@@ -143,6 +152,7 @@ class _ComicListState extends State<ComicList> {
         onTap: () {
           _pushToComicInfo(widget.data[i]);
         },
+        onLongPress: _longPressCallback(i),
         child: ComicInfoCard(widget.data[i]),
       ));
     }
@@ -175,6 +185,8 @@ class _ComicListState extends State<ComicList> {
           _pushToComicInfo(widget.data[i]);
         },
         child: Card(
+          shape: coverShape,
+          clipBehavior: Clip.antiAlias,
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               late final Widget image;
@@ -184,6 +196,7 @@ class _ComicListState extends State<ComicList> {
                     comicId: widget.data[i].id,
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
+                    longPressMenuItems: _longPressImageCallback(i),
                   );
                   break;
                 case PagerCoverRate.rateSquare:
@@ -191,6 +204,7 @@ class _ComicListState extends State<ComicList> {
                     comicId: widget.data[i].id,
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
+                    longPressMenuItems: _longPressImageCallback(i),
                   );
                   break;
               }
@@ -286,12 +300,15 @@ class _ComicListState extends State<ComicList> {
         onTap: () {
           _pushToComicInfo(widget.data[i]);
         },
+        onLongPress: _longPressCallback(i),
         child: Column(
           children: [
             SizedBox(
               width: width,
               height: height,
               child: Card(
+                shape: coverShape,
+                clipBehavior: Clip.antiAlias,
                 child: LayoutBuilder(
                   builder: (BuildContext context, BoxConstraints constraints) {
                     late final Widget image;
@@ -301,6 +318,7 @@ class _ComicListState extends State<ComicList> {
                           comicId: widget.data[i].id,
                           width: constraints.maxWidth,
                           height: constraints.maxHeight,
+                          longPressMenuItems: _longPressImageCallback(i),
                         );
                         break;
                       case PagerCoverRate.rateSquare:
@@ -308,6 +326,7 @@ class _ComicListState extends State<ComicList> {
                           comicId: widget.data[i].id,
                           width: constraints.maxWidth,
                           height: constraints.maxHeight,
+                          longPressMenuItems: _longPressImageCallback(i),
                         );
                         break;
                     }
@@ -367,5 +386,40 @@ class _ComicListState extends State<ComicList> {
     Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) {
       return ComicInfoScreen(data.id, data);
     }));
+  }
+
+  GestureLongPressCallback? _longPressCallback(int index) {
+    if (widget.longPressMenuItems != null &&
+        widget.longPressMenuItems!.isNotEmpty) {
+      return () {
+        showMenu(
+          context: context,
+          position: const RelativeRect.fromLTRB(0, 0, 0, 0),
+          items: widget.longPressMenuItems!
+              .map((e) => PopupMenuItem(
+                    child: Text(e.title),
+                    value: e,
+                  ))
+              .toList(),
+        ).then((value) {
+          if (value != null) {
+            value.onChoose.call(widget.data[index]);
+          }
+        });
+      };
+    }
+    return null;
+  }
+
+  List<LongPressMenuItem>? _longPressImageCallback(int index) {
+    if (widget.longPressMenuItems != null &&
+        widget.longPressMenuItems!.isNotEmpty) {
+      return widget.longPressMenuItems!
+          .map((e) => LongPressMenuItem(e.title, () {
+                e.onChoose(widget.data[index]);
+              }))
+          .toList();
+    }
+    return null;
   }
 }

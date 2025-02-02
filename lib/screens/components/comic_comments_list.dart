@@ -144,16 +144,17 @@ Widget _buildComment(
       if (!jumpList) {
         return;
       }
-      if (comment.AID != null) {}
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => _CommentChildrenScreen(
-            aid: comment.AID!,
-            mode: mode,
-            comment: comment,
+      if (comment.AID != null) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => _CommentChildrenScreen(
+              aid: comment.AID!,
+              mode: mode,
+              comment: comment,
+            ),
           ),
-        ),
-      );
+        );
+      }
     },
     child: _ComicCommentItem(
       aid: comment.AID,
@@ -296,7 +297,7 @@ class _ComicCommentItemState extends State<_ComicCommentItem> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         alignment: WrapAlignment.spaceBetween,
                         children: [
-                          Text("Lv. ? (?)", style: levelStyle),
+                          Text("Lv.${comment.expinfo.level}", style: levelStyle),
                           Text.rich(TextSpan(
                             style: levelStyle,
                             children: [
@@ -385,7 +386,28 @@ class _ComicCommentItemState extends State<_ComicCommentItem> {
                   },
                 ),
                 Container(height: 5),
-                Text(comment.content, style: connectStyle),
+                GestureDetector(
+                  onLongPress: () {
+                    confirmCopy(
+                      context,
+                      comment.content
+                          .replaceAll(
+                            "<div style='flex-direction:row;flex-wrap:wrap;'>",
+                            "",
+                          )
+                          .replaceAll("</div>", ""),
+                    );
+                  },
+                  child: Text(
+                    comment.content
+                        .replaceAll(
+                          "<div style='flex-direction:row;flex-wrap:wrap;'>",
+                          "",
+                        )
+                        .replaceAll("</div>", ""),
+                    style: connectStyle,
+                  ),
+                ),
                 ...widget.gotoComic
                     ? [
                         Container(height: 8),

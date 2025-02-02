@@ -1,8 +1,11 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:jasmine/basic/commons.dart';
 import 'package:jasmine/basic/entities.dart';
 import 'package:jasmine/screens/comic_search_screen.dart';
 
+import '../../configs/display_jmcode.dart';
+import '../../configs/search_title_words.dart';
 import 'images.dart';
 
 class ComicInfoCard extends StatelessWidget {
@@ -34,6 +37,8 @@ class ComicInfoCard extends StatelessWidget {
       child: Row(
         children: [
           Card(
+            shape: coverShape,
+            clipBehavior: Clip.antiAlias,
             child: JM3x4Cover(
               comicId: comic.id,
               width: 100 * 3 / 4,
@@ -45,14 +50,45 @@ class ComicInfoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                link
-                    ? GestureDetector(
-                        onLongPress: () {
+                ...link
+                    ? [
+                  Text.rich(TextSpan(children: [
+                    currentSearchTitleWords()
+                        ? TextSpan(
+                      style: titleStyle,
+                      children: titleProcess(comic.name, context),
+                      recognizer: LongPressGestureRecognizer()
+                        ..onLongPress = () {
                           confirmCopy(context, comic.name);
                         },
-                        child: Text(comic.name, style: titleStyle),
-                      )
-                    : Text(comic.name, style: titleStyle),
+                    )
+                        : TextSpan(
+                      text: comic.name,
+                      style: titleStyle,
+                      children: [],
+                      recognizer: LongPressGestureRecognizer()
+                        ..onLongPress = () {
+                          confirmCopy(context, comic.name);
+                        },
+                    ),
+                    ...currentDisplayJmcode()
+                        ? [
+                      TextSpan(
+                        text: "  (JM${comic.id})",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.orange.shade700,
+                        ),
+                        recognizer: LongPressGestureRecognizer()
+                          ..onLongPress = () {
+                            confirmCopy(context, "JM${comic.id}");
+                          },
+                      ),
+                    ]
+                        : [],
+                  ])),
+                ]
+                    : [Text(comic.name, style: titleStyle)],
                 Container(height: 4),
                 link
                     ? GestureDetector(
@@ -102,5 +138,66 @@ class ComicInfoCard extends StatelessWidget {
       Text(category.title!),
       Container(width: 15),
     ];
+  }
+
+  List<TextSpan> titleProcess(String name, BuildContext context) {
+    RegExp regExp = RegExp(r"\[[^\]]+\]");
+    int start = 0;
+    List<TextSpan> result = [];
+    Iterable<Match> matches = regExp.allMatches(name);
+    for (Match match in matches) {
+      // =======
+      // if (match.start > start) {
+      //   result.add(TextSpan(text: name.substring(start, match.start)));
+      // }
+      // result.add(TextSpan(
+      //   text: name.substring(match.start, match.end),
+      //   style: const TextStyle(
+      //     color: Colors.blue,
+      //     decoration: TextDecoration.underline,
+      //   ),
+      //   recognizer: TapGestureRecognizer()
+      //     ..onTap = () {
+      //       Navigator.of(context).push(MaterialPageRoute(
+      //         builder: (BuildContext context) {
+      //           return ComicSearchScreen(
+      //             initKeywords: name.substring(match.start + 1, match.end - 1),
+      //           );
+      //         },
+      //       ));
+      //     },
+      // ));
+      // start = match.end;
+      // =======
+      if (match.start > start) {
+        result.add(TextSpan(text: name.substring(start, match.start + 1)));
+      }
+      result.add(TextSpan(
+        text: name.substring(match.start + 1, match.end - 1),
+        style: TextStyle(
+          // 30%蓝色 叠加本该有的颜色
+          color: Color.alphaBlend(Colors.blue.withOpacity(0.3),
+              Theme.of(context).textTheme.bodyText1!.color!),
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (BuildContext context) {
+                return ComicSearchScreen(
+                  initKeywords: name.substring(match.start + 1, match.end - 1),
+                );
+              },
+            ));
+          },
+      ));
+      if (match.start > start) {
+        result.add(TextSpan(text: name.substring(match.end - 1, match.end)));
+      }
+      start = match.end;
+    }
+    if (start < name.length) {
+      result.add(TextSpan(text: name.substring(start)));
+    }
+    return result;
   }
 }

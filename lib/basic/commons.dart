@@ -1,11 +1,18 @@
 import 'dart:io';
 
 import 'package:clipboard/clipboard.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_styled_toast/flutter_styled_toast.dart';
 import 'package:jasmine/basic/methods.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../configs/android_version.dart';
+
+const coverShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.all(Radius.circular(4.5)),
+);
 
 /// 显示一个toast
 void defaultToast(BuildContext context, String title) {
@@ -73,11 +80,26 @@ Future<T?> chooseMapDialog<T>(
   );
 }
 
-Future saveImageFileToGallery(BuildContext context, String path) async {
+Future<bool> androidGalleryPermissionRequest() async {
+  if (Platform.isAndroid && androidVersion < 33) {
+    return await (Permission.storage.request()).isGranted;
+  }
+  return true;
+}
+
+Future<bool> androidMangeStorageRequest() async {
   if (Platform.isAndroid) {
-    if (!(await Permission.storage.request()).isGranted) {
-      return;
+    if (androidVersion < 30) {
+      return await (Permission.storage.request()).isGranted;
     }
+    return await (Permission.manageExternalStorage.request()).isGranted;
+  }
+  return true;
+}
+
+Future saveImageFileToGallery(BuildContext context, String path) async {
+  if (!await androidGalleryPermissionRequest()) {
+    throw Exception("申请权限被拒绝");
   }
   if (Platform.isIOS || Platform.isAndroid) {
     await methods.saveImageFileToGallery(path);
@@ -85,6 +107,29 @@ Future saveImageFileToGallery(BuildContext context, String path) async {
     return;
   }
   defaultToast(context, "暂不支持该平台");
+}
+
+Future saveImageFileToFile(BuildContext context, String path) async {
+  if (!await androidGalleryPermissionRequest()) {
+    throw Exception("申请权限被拒绝");
+  }
+  late String folder;
+  if (Platform.isAndroid) {
+    folder = await methods.picturesDir();
+  } else if (Platform.isIOS) {
+    folder = await methods.iosGetDocumentDir() + "/pictures";
+  } else {
+    var _f = await chooseFolder(context);
+    if (_f != null) {
+      folder = _f;
+    }
+  }
+  try {
+    await methods.copyPictureToFolder(folder, path);
+    defaultToast(context, "保存成功");
+  } catch (e) {
+    defaultToast(context, "保存失败 : $e");
+  }
 }
 
 Future<SortBy?> chooseSortBy(BuildContext context) async {
@@ -215,4 +260,11 @@ void confirmCopy(BuildContext context, String content) async {
   if (await confirmDialog(context, "复制", content)) {
     copyToClipBoard(context, content);
   }
+}
+
+/// 选择一个文件夹用于保存文件
+Future<String?> chooseFolder(BuildContext context) async {
+  return FilePicker.platform.getDirectoryPath(
+    dialogTitle: "选择一个文件夹, 将文件保存到这里",
+  );
 }
